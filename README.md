@@ -8,9 +8,25 @@ tty1 install rustwake   # bring a game home
 tty1 run rustwake       # start it
 tty1 update             # bring everything up to date, tty1 included
 tty1 doctor             # say what this terminal can do
+tty1 man rustwake       # a game's manual page, or tty1's own with no name
 ```
 
-**There is no release of `tty1` yet, and no game has one it can install.** Until then it builds from this repository with `go build`, and `tty1 ls` says of every game that it has no release yet.
+No game has a release yet, so `tty1 ls` says so of each.
+
+## Install
+
+**From a release.** Take the archive for your system from [the latest release](https://github.com/usrgames/tty1/releases/latest), with `manifest.json` and `manifest.json.sig`, and check them as [KEYS.md](https://github.com/usrgames/usr.games/blob/main/KEYS.md#check-a-release-by-hand) says. Then unpack it and put `tty1` where your shell finds it:
+
+```sh
+tar -xzf tty1_darwin_arm64.tar.gz
+mv tty1 ~/.local/bin/
+```
+
+The archive holds `tty1`, its `LICENSE`, and its manual page, `tty1.1`.
+
+**From the source.** `go build` in a clone of this repository.
+
+**Not yet:** the one-line installer, and `go install usr.games/tty1@latest`. Both need usr.games, and its doors are not open.
 
 ## What it does, and what it will not do
 
@@ -44,6 +60,7 @@ Three variables point it elsewhere, for trying it out: `TTY1_HOME` for the folde
 | Path | What |
 |---|---|
 | `main.go` | Wires the commands to this machine: its folders, its clock, the real network, its terminal. |
+| `man/tty1.1` | The manual page. It is built into the program, and `tty1 man` shows it. A test holds it to the help. |
 | `internal/cli` | The commands, and the order their steps go in. |
 | `internal/fetch` | The two things asked of the network: the site's list, and a program's releases. |
 | `internal/release` | Decides whether a release is the studio's: checks the signature of its manifest, then each file against the manifest. |
