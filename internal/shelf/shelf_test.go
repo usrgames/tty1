@@ -1,6 +1,7 @@
 package shelf
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -89,6 +90,33 @@ func TestAFolderWithoutItsProgramIsNotPut(t *testing.T) {
 	path, _ := s.Program("hello")
 	if got, _ := os.ReadFile(path); string(got) != "the first" {
 		t.Errorf("wanted the first program untouched, got %q", got)
+	}
+}
+
+// The one moment a game is not whole is between moving the old folder aside and moving the new
+// one in. If the second move fails, the old game is moved back: a failed update costs nothing.
+func TestTheOldGameIsPutBackIfTheNewOneCannotBeMovedIn(t *testing.T) {
+	s, _ := At(t.TempDir())
+	if err := s.Put("hello", stage(t, s, "hello", "the first"), manifest("v1.0.0")); err != nil {
+		t.Fatal(err)
+	}
+	staged := stage(t, s, "hello", "the second")
+	moves := 0
+	err := swap(func(from, to string) error {
+		if moves++; moves == 2 {
+			return errors.New("the disk said no")
+		}
+		return os.Rename(from, to)
+	}, staged, s.game("hello"))
+	if err == nil || moves != 3 {
+		t.Fatalf("wanted the swap to fail on its second move and make a third to put the old game back, got %v after %d moves", err, moves)
+	}
+	path, ok := s.Program("hello")
+	if got, _ := os.ReadFile(path); !ok || string(got) != "the first" {
+		t.Errorf("wanted the first game back in place, got %q, installed: %v", got, ok)
+	}
+	if v, _ := s.Version("hello"); v != "v1.0.0" {
+		t.Errorf("wanted v1.0.0 still installed, got %q", v)
 	}
 }
 

@@ -84,7 +84,8 @@ func (c Client) get(ctx context.Context, address string) (io.ReadCloser, error) 
 		return nil, fmt.Errorf("%s: %w", u.Path, errNotFound)
 	}
 	resp.Body.Close()
-	return nil, fmt.Errorf("%s %w: %s", u.Host, ErrAnswer, resp.Status)
+	// The number and not the server's own words for it, which would go to a terminal as they came.
+	return nil, fmt.Errorf("%s %w: status %d", u.Host, ErrAnswer, resp.StatusCode)
 }
 
 var errNotFound = errors.New("not found")
