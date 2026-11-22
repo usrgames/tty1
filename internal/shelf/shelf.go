@@ -106,16 +106,22 @@ func (s Shelf) Put(name, staged string, manifest []byte) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
+	return swap(os.Rename, staged, dst)
+}
+
+// swap moves the folder staged to dst, in the stead of what is there. The move is handed in so
+// that a test can make it fail part way, which a real disk will not do on request.
+func swap(move func(from, to string) error, staged, dst string) error {
 	aside := staged + ".old"
 	had := true
-	if err := os.Rename(dst, aside); errors.Is(err, os.ErrNotExist) {
+	if err := move(dst, aside); errors.Is(err, os.ErrNotExist) {
 		had = false
 	} else if err != nil {
 		return err
 	}
-	if err := os.Rename(staged, dst); err != nil {
+	if err := move(staged, dst); err != nil {
 		if had {
-			os.Rename(aside, dst)
+			move(aside, dst)
 		}
 		return err
 	}

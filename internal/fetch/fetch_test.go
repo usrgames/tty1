@@ -60,8 +60,13 @@ func TestAListTty1CannotUseIsRefusedWhole(t *testing.T) {
 		"a list far too long":           `{"schema": 1, "games": [], "padding": "` + strings.Repeat("x", maxList) + `"}`,
 	} {
 		c, _ := serve(t, map[string]string{"/etc/games.json": body})
-		if games, err := c.Games(context.Background()); !errors.Is(err, ErrAnswer) || games != nil {
+		games, err := c.Games(context.Background())
+		if !errors.Is(err, ErrAnswer) || games != nil {
 			t.Errorf("%s: wanted %v and no games, got %v and %v", what, ErrAnswer, games, err)
+		}
+		// Too long is refused for being too long, not for whatever its first megabyte happens to say.
+		if what == "a list far too long" && !strings.Contains(err.Error(), "more than") {
+			t.Errorf("%s: wanted it refused for its size, got %v", what, err)
 		}
 	}
 }
@@ -80,8 +85,12 @@ func TestTheNewestReleaseIsAskedOfItsRepository(t *testing.T) {
 		t.Errorf("wanted the manifest and its signature as served, got %q, %q and %v", manifest, sig, err)
 	}
 	for name, want := range map[string]error{"skyspear": ErrNoRelease, "nosig": ErrAnswer, "broken": ErrAnswer, "huge": ErrAnswer} {
-		if m, s, err := c.Newest(context.Background(), name); !errors.Is(err, want) || m != nil || s != nil {
+		m, s, err := c.Newest(context.Background(), name)
+		if !errors.Is(err, want) || m != nil || s != nil {
 			t.Errorf("%s: wanted %v and nothing else, got %v, %q, %q", name, want, err, m, s)
+		}
+		if name == "huge" && !strings.Contains(err.Error(), "more than") {
+			t.Errorf("%s: wanted it refused for its size, got %v", name, err)
 		}
 	}
 
