@@ -43,7 +43,7 @@ func (k key) wire() []byte { return field(field(nil, keyKind), string(k.pub)) }
 // signs returns a list of signers with this key as its one root.
 func (k key) signs(t *testing.T) Signers {
 	t.Helper()
-	s, err := parseSigners([]byte(who + ` cert-authority,namespaces="` + who + `" ` + keyKind + " " + base64.StdEncoding.EncodeToString(k.wire()) + "\n"))
+	s, err := ParseSigners([]byte(who + ` cert-authority,namespaces="` + who + `" ` + keyKind + " " + base64.StdEncoding.EncodeToString(k.wire()) + "\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

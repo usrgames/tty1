@@ -54,7 +54,7 @@ var studioList []byte
 
 // Studio returns the studio's signers, built into the program.
 func Studio() Signers {
-	s, err := parseSigners(studioList)
+	s, err := ParseSigners(studioList)
 	if err != nil {
 		// The list is part of the program and a test reads it: this cannot happen in a build that passed.
 		panic("release: the built-in list of signers: " + err.Error())
@@ -62,10 +62,11 @@ func Studio() Signers {
 	return s
 }
 
-// parseSigners reads a list in the form of OpenSSH's allowed-signers file. It accepts the one
-// shape the studio publishes and nothing wider: each line names an identity, makes an Ed25519
+// ParseSigners reads a list in the form of OpenSSH's allowed-signers file. tty1 itself uses the
+// built-in list, through Studio; this is for tests, which make a studio of their own. It accepts
+// the one shape the studio publishes and nothing wider: each line names an identity, makes an Ed25519
 // key a certificate authority for it, and limits it to one namespace.
-func parseSigners(list []byte) (Signers, error) {
+func ParseSigners(list []byte) (Signers, error) {
 	var s Signers
 	for _, line := range strings.Split(string(list), "\n") {
 		if line = strings.TrimSpace(line); line == "" || strings.HasPrefix(line, "#") {

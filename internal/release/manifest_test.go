@@ -42,6 +42,16 @@ func TestARealManifestOpensAsWhatItIsAndAsNothingElse(t *testing.T) {
 			t.Errorf("asked for %q %q: wanted %v, got %v", tt.name, tt.version, ErrOther, err)
 		}
 	}
+	// As the newest release of relay, it is whatever version it says. Of anything else, nothing.
+	if m, err := Studio().Newest(manifest, sig, "relay", now); err != nil || m.Version != "v0.1.0-rc.1" {
+		t.Errorf("as the newest relay: wanted v0.1.0-rc.1, got %q and %v", m.Version, err)
+	}
+	if _, err := Studio().Newest(manifest, sig, "rustwake", now); !errors.Is(err, ErrOther) {
+		t.Errorf("as the newest rustwake: wanted %v, got %v", ErrOther, err)
+	}
+	if _, err := Studio().Newest(manifest, nil, "relay", now); !errors.Is(err, ErrMalformed) {
+		t.Errorf("as the newest relay, with no signature: wanted %v, got %v", ErrMalformed, err)
+	}
 	// And unsigned, it is nothing.
 	if _, err := Studio().Open(manifest, nil, "relay", "v0.1.0-rc.1", now); !errors.Is(err, ErrMalformed) {
 		t.Errorf("with no signature: wanted %v, got %v", ErrMalformed, err)
@@ -70,6 +80,8 @@ func TestASignedManifestIsStillHeldToItsShape(t *testing.T) {
 
 		{"a manifest of a kind not known yet", `{"schema": 2, "name": "hello", "version": "v1.0.0", "files": []}`, ErrManifest},
 		{"a manifest of no kind", `{"name": "hello", "version": "v1.0.0", "files": []}`, ErrManifest},
+		{"a manifest of another version", `{"schema": 1, "name": "hello", "version": "v0.9.0", "files": []}`, ErrOther},
+		{"a manifest of another program", `{"schema": 1, "name": "goodbye", "version": "v1.0.0", "files": []}`, ErrOther},
 		{"text that is not JSON", `hello`, ErrManifest},
 		{"JSON with something after it", file(entry) + ` {}`, ErrManifest},
 		{"a size that is text", file(`{"name": "a", "size": "10", "sha256": "` + sum + `"}`), ErrManifest},
@@ -96,6 +108,25 @@ func TestASignedManifestIsStillHeldToItsShape(t *testing.T) {
 		if err != nil && (m.Name != "" || m.Files != nil) {
 			t.Errorf("%s: wanted nothing of a refused manifest handed back, got %+v", tt.what, m)
 		}
+		// The newest release is held to the same shape, whatever its version.
+		_, err = signers.Newest(manifest, release.sign(manifest, good, shape{}), "hello", noon)
+		if want := tt.want; tt.what == "a manifest of another version" {
+			if err != nil {
+				t.Errorf("%s, as the newest: wanted it opened, got %v", tt.what, err)
+			}
+		} else if !errors.Is(err, want) {
+			t.Errorf("%s, as the newest: wanted %v, got %v", tt.what, want, err)
+		}
+	}
+}
+
+// The newest release has to say which version it is: that is the whole of what is asked of it.
+func TestTheNewestReleaseMustNameItsVersion(t *testing.T) {
+	root, release, signers := studio(t)
+	manifest := []byte(`{"schema": 1, "name": "hello", "version": "", "files": []}`)
+	sig := release.sign(manifest, root.vouch(release, cert{}), shape{})
+	if _, err := signers.Newest(manifest, sig, "hello", noon); !errors.Is(err, ErrManifest) {
+		t.Errorf("wanted %v, got %v", ErrManifest, err)
 	}
 }
 
