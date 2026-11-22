@@ -68,6 +68,17 @@ func (s Shelf) Program(name string) (string, bool) {
 	return path, true
 }
 
+// Manual returns the path of an installed game's manual page, which its archive held as NAME.6:
+// the studio files its games in section 6 of the manual.
+func (s Shelf) Manual(name string) (string, bool) {
+	path := filepath.Join(s.game(name), name+".6")
+	info, err := os.Stat(path)
+	if _, installed := s.Program(name); !installed || err != nil || !info.Mode().IsRegular() {
+		return "", false
+	}
+	return path, true
+}
+
 // Installed returns the names of the games that are installed, from A to Z.
 func (s Shelf) Installed() []string {
 	entries, _ := os.ReadDir(filepath.Join(s.dir, "games"))

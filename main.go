@@ -5,6 +5,7 @@
 //	tty1 install rustwake
 //	tty1 run rustwake
 //	tty1 doctor
+//	tty1 man rustwake
 //
 // It asks the site for the list of games and each game's repository for its newest release,
 // checks a release against the studio's signature before anything of it is unpacked, and keeps
@@ -15,6 +16,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/signal"
@@ -34,6 +36,11 @@ import (
 
 // version is set when a release is built. A tty1 built any other way has "dev" here.
 var version = "dev"
+
+// The manual page is built into the program, so that `tty1 man` has it however tty1 was installed.
+//
+//go:embed man/tty1.1
+var manual []byte
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -75,7 +82,8 @@ func main() {
 		// status with no tty1 left standing between.
 		Exec: func(program string, args []string) error { return syscall.Exec(program, args, os.Environ()) },
 		// The one thing tty1 asks of glonk: the question a game asks its terminal as it starts.
-		Probe: func() (engine.Terminal, error) { return engine.Probe(engine.Config{}) },
+		Probe:  func() (engine.Terminal, error) { return engine.Probe(engine.Config{}) },
+		Manual: manual,
 	}
 	os.Exit(app.Run(ctx, os.Args[1:]))
 }

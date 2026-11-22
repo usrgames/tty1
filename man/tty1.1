@@ -1,0 +1,190 @@
+.TH TTY1 1 2026-11-22 usr.games "General Commands Manual"
+.SH NAME
+tty1 \- the usr.games launcher
+.SH SYNOPSIS
+.B tty1 ls
+.br
+.B tty1 install
+.I name
+.br
+.B tty1 update
+.RI [ name ]
+.br
+.B tty1 run
+.I name
+.RI [ argument " ...]"
+.br
+.B tty1 doctor
+.br
+.B tty1 man
+.RI [ name ]
+.br
+.B tty1 help
+.br
+.B tty1 \-\-version
+.SH DESCRIPTION
+.B tty1
+brings the games of usr.games home, keeps them current, and starts them.
+It keeps what it installs in one folder of its own and puts nothing on your
+.BR PATH .
+.TP
+.B tty1 ls
+Lists the games: how many play each, which are installed, and which have a
+newer release.
+With no network it lists what is installed and says that it could not ask.
+.TP
+.BI "tty1 install " name
+Brings the newest release of a game home.
+The release is checked first; see
+.BR "HOW A RELEASE IS CHECKED" .
+.TP
+.BR "tty1 update " [\fIname\fR]
+Brings an installed game up to date.
+With no name it does so for every installed game, and then for
+.B tty1
+itself, if a release built it.
+A
+.B tty1
+built with
+.B go install
+is updated the same way it was installed, and says so.
+.TP
+.BI "tty1 run " name " \fR[\fIargument\fR ...]"
+Starts an installed game and hands it the rest of the line.
+The game takes the place of
+.BR tty1 ,
+so it has the terminal to itself.
+This needs no network.
+.TP
+.B tty1 doctor
+Looks at the terminal it is running in and says what it found: whether the
+terminal tells a game when a key is let go, whether it shows 24-bit colour,
+and how big it is, with what to change where something can be.
+A key pressed while it asks, a quarter second at most, is lost.
+.TP
+.BR "tty1 man " [\fIname\fR]
+Shows the manual page of an installed game, with the
+.BR man (1)
+of this machine.
+With no name, or the name
+.BR tty1 ,
+it shows this page.
+.TP
+.B tty1 help
+Shows the commands.
+.TP
+.B tty1 \-\-version
+Says which
+.B tty1
+this is.
+.SH HOW A RELEASE IS CHECKED
+A release carries a manifest, which names every file with its size and
+SHA-256, and a signature of the manifest.
+.B tty1
+takes the steps below in this order, and stops at the first that fails.
+Nothing is unpacked before every check has passed, and a game that was
+installed before stays as it was.
+.IP 1. 4
+The signature has to be the studio's, made for this program.
+The one key
+.B tty1
+trusts is built into it.
+.IP 2. 4
+The release must not be older than the one installed.
+.IP 3. 4
+The archive for this machine is downloaded to its end and has to have the
+size and the SHA-256 the manifest gives.
+.IP 4. 4
+The archive is unpacked strictly: plain files with plain names, and nothing
+else.
+.IP 5. 4
+The game is unpacked beside where it will live and moved into place whole.
+.PP
+The list of games is not trusted.
+It says what to offer.
+Whatever name it is given,
+.B tty1
+installs only what the studio signed under that exact name.
+.SH FILES
+.TP
+.I ~/.local/share/tty1/
+Everything
+.B tty1
+writes is in this folder, or in the folder
+.I tty1
+under
+.B XDG_DATA_HOME
+where that is set.
+Removing it removes every game
+.B tty1
+installed.
+.TP
+.I ~/.local/share/tty1/games/name/
+An installed game: what its archive held, and the manifest that vouched for
+it.
+.TP
+.I ~/.local/share/tty1/staging/
+A release while it is downloaded and checked.
+It is empty when
+.B tty1
+is not at work.
+.TP
+.I ~/.local/share/tty1/man/tty1.1
+This page, written here when
+.B tty1 man
+is asked for it.
+.PP
+When
+.B tty1 update
+replaces
+.B tty1
+itself, it writes the new program beside the old one and moves it over in
+one step.
+.SH ENVIRONMENT
+.TP
+.B TTY1_HOME
+The folder to keep everything in, instead of the one above.
+.TP
+.B TTY1_SITE
+Where the list of games is asked for, instead of https://usr.games.
+.TP
+.B TTY1_RELEASES
+Where releases are asked for, instead of https://github.com/usrgames.
+.TP
+.B XDG_DATA_HOME
+Where programs keep their data, if not in
+.IR ~/.local/share .
+.TP
+.BR COLORTERM ", " TERM
+What
+.B tty1 doctor
+goes by for colour, as the games do.
+.PP
+The first three are for trying
+.B tty1
+out.
+None of them changes whose signature it accepts.
+.SH EXIT STATUS
+.TP
+.B 0
+What was asked was done.
+.TP
+.B 1
+It could not be done.
+The reason is on the standard error.
+.TP
+.B 2
+The command line was not understood.
+.PP
+.B tty1 run
+ends with the status of the game it started.
+.B tty1 doctor
+fails only where a game could not run at all: where its input or its output
+is not a terminal.
+.SH SEE ALSO
+.BR man (1),
+.BR ssh\-keygen (1)
+.PP
+The page
+.I /terminals
+of usr.games says which terminals play the games best.

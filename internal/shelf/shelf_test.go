@@ -120,6 +120,38 @@ func TestTheOldGameIsPutBackIfTheNewOneCannotBeMovedIn(t *testing.T) {
 	}
 }
 
+// A game's manual page is the file NAME.6 its archive held, and only that: a page with no game
+// around it, or a folder of that name, is no page.
+func TestAGamesManualPageIsAFileOfAnInstalledGame(t *testing.T) {
+	s, _ := At(t.TempDir())
+	dir := stage(t, s, "hello", "the program")
+	if err := os.WriteFile(filepath.Join(dir, "hello.6"), []byte(".TH HELLO 6\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Put("hello", dir, manifest("v1.0.0")); err != nil {
+		t.Fatal(err)
+	}
+	if path, ok := s.Manual("hello"); !ok || path != filepath.Join(s.Dir(), "games", "hello", "hello.6") {
+		t.Errorf("wanted the page of the installed game, got %q, %v", path, ok)
+	}
+
+	games := filepath.Join(s.Dir(), "games")
+	os.MkdirAll(filepath.Join(games, "orphan"), 0o755)
+	os.WriteFile(filepath.Join(games, "orphan", "orphan.6"), []byte("x"), 0o644) // a page, and no game
+	if err := s.Put("folder", stage(t, s, "folder", "the program"), manifest("v1.0.0")); err != nil {
+		t.Fatal(err)
+	}
+	os.Mkdir(filepath.Join(games, "folder", "folder.6"), 0o755) // a folder where the page would be
+	if err := s.Put("bare", stage(t, s, "bare", "the program"), manifest("v1.0.0")); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"orphan", "folder", "bare", "nothing"} {
+		if path, ok := s.Manual(name); ok {
+			t.Errorf("%s: wanted no page, got %s", name, path)
+		}
+	}
+}
+
 func TestOnlyAWholeGameCountsAsInstalled(t *testing.T) {
 	s, _ := At(t.TempDir())
 	games := filepath.Join(s.Dir(), "games")

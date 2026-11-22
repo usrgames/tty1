@@ -1,4 +1,4 @@
-// Package cli is tty1's commands: ls, install, update, run and doctor. The first four are a few
+// Package cli is tty1's commands: ls, install, update, run, doctor and man. The first four are a few
 // steps over the packages beside this one, in an order that matters: a release is checked before anything of it
 // is unpacked, unpacked before anything of it is put in place, and put in place whole.
 package cli
@@ -43,6 +43,9 @@ type App struct {
 
 	// Probe asks the terminal tty1 is running in what it can do, as a game would at its start.
 	Probe func() (engine.Terminal, error)
+
+	// Manual is tty1's own manual page, as it is written in man/tty1.1.
+	Manual []byte
 }
 
 // Names no game may have: they are the studio's own programs, which install another way.
@@ -55,6 +58,7 @@ const usage = `tty1 is the usr.games launcher: it brings the games home, keeps t
   tty1 update [NAME]      bring everything up to date, or one game
   tty1 run NAME [...]     start a game
   tty1 doctor             say what this terminal can do
+  tty1 man [NAME]         show the manual page of a game, or this program's
   tty1 help               show this
   tty1 --version          say which tty1 this is
 
@@ -95,6 +99,11 @@ func (a *App) Run(ctx context.Context, args []string) int {
 			return a.misuse("tty1 run takes a game, as in: tty1 run rustwake")
 		}
 		return a.run(rest[0], rest[1:])
+	case "man":
+		if len(rest) > 1 {
+			return a.misuse("tty1 man takes one game, or none for tty1's own page")
+		}
+		return a.status(a.man(rest))
 	case "doctor":
 		if len(rest) != 0 {
 			return a.misuse("tty1 doctor takes nothing after it")
