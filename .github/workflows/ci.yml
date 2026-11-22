@@ -19,7 +19,8 @@ concurrency:
 
 jobs:
   # Formatting, vet and the tests. The tests of the signature check ask the runner's own
-  # ssh-keygen for its verdict on freshly made keys, and tty1's must be the same.
+  # ssh-keygen for its verdict on freshly made keys, and tty1's must be the same. Three tests
+  # skip themselves where what they need is missing, so each is run again by name below.
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -40,6 +41,20 @@ jobs:
           ssh -V
           go test ./internal/release -run TestItsVerdictIsThatOfTheRealSSHKeygen -count=1 -v | tee verdict.txt
           grep -- '--- PASS: TestItsVerdictIsThatOfTheRealSSHKeygen' verdict.txt
+      # doctor is tried as the real program on a pseudo-terminal, and that test too skips itself
+      # where there is none. Here it has to have run.
+      - name: doctor really ran on a terminal
+        run: |
+          go test . -run TestDoctorOnATerminalThatHasEverything -count=1 -v | tee doctor.txt
+          grep -- '--- PASS: TestDoctorOnATerminalThatHasEverything' doctor.txt
+      # doctor tells a player what the site's page /terminals tells them, in the page's words.
+      # The test that holds the two together needs the page, so it is fetched, and the test has
+      # to have run. A page that changed fails here at the next run, not when it changes.
+      - name: doctor's words are the page's words
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/usrgames/usr.games/main/site/terminals.html -o "$RUNNER_TEMP/terminals.html"
+          TTY1_TERMINALS_PAGE="$RUNNER_TEMP/terminals.html" go test ./internal/cli -run TestItsWordsAreThePagesWords -count=1 -v | tee words.txt
+          grep -- '--- PASS: TestItsWordsAreThePagesWords' words.txt
       # The one key tty1 trusts is built in from a copy of the site's published list. A copy
       # that drifted would make tty1 refuse every release, or trust a key the site no longer names.
       - name: the built-in list of signers is the site's

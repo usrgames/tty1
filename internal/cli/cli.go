@@ -1,5 +1,5 @@
-// Package cli is tty1's commands: ls, install, update and run. Each one is a few steps over the
-// packages beside this one, in an order that matters: a release is checked before anything of it
+// Package cli is tty1's commands: ls, install, update, run and doctor. The first four are a few
+// steps over the packages beside this one, in an order that matters: a release is checked before anything of it
 // is unpacked, unpacked before anything of it is put in place, and put in place whole.
 package cli
 
@@ -14,6 +14,8 @@ import (
 	"sync"
 	"text/tabwriter"
 	"time"
+
+	"glonk.dev/engine"
 
 	"usr.games/tty1/internal/fetch"
 	"usr.games/tty1/internal/release"
@@ -38,6 +40,9 @@ type App struct {
 
 	// Exec starts a game in this process's place, so that the game has the terminal to itself.
 	Exec func(program string, args []string) error
+
+	// Probe asks the terminal tty1 is running in what it can do, as a game would at its start.
+	Probe func() (engine.Terminal, error)
 }
 
 // Names no game may have: they are the studio's own programs, which install another way.
@@ -49,6 +54,7 @@ const usage = `tty1 is the usr.games launcher: it brings the games home, keeps t
   tty1 install NAME       bring a game home
   tty1 update [NAME]      bring everything up to date, or one game
   tty1 run NAME [...]     start a game
+  tty1 doctor             say what this terminal can do
   tty1 help               show this
   tty1 --version          say which tty1 this is
 
@@ -89,6 +95,11 @@ func (a *App) Run(ctx context.Context, args []string) int {
 			return a.misuse("tty1 run takes a game, as in: tty1 run rustwake")
 		}
 		return a.run(rest[0], rest[1:])
+	case "doctor":
+		if len(rest) != 0 {
+			return a.misuse("tty1 doctor takes nothing after it")
+		}
+		return a.doctor()
 	default:
 		if fetch.Name(cmd) {
 			return a.misuse(fmt.Sprintf("tty1 does not know %q. To start a game: tty1 run %s", cmd, cmd))
