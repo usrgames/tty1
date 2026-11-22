@@ -33,6 +33,13 @@ jobs:
       - name: go.mod is tidy
         run: go mod tidy -diff
       - run: make check
+      # The comparison with ssh-keygen skips itself on a machine that has none, and a comparison
+      # that did not run looks just like one that passed. Here it has to have run.
+      - name: the comparison with ssh-keygen really ran
+        run: |
+          ssh -V
+          go test ./internal/release -run TestItsVerdictIsThatOfTheRealSSHKeygen -count=1 -v | tee verdict.txt
+          grep -- '--- PASS: TestItsVerdictIsThatOfTheRealSSHKeygen' verdict.txt
       # The one key tty1 trusts is built in from a copy of the site's published list. A copy
       # that drifted would make tty1 refuse every release, or trust a key the site no longer names.
       - name: the built-in list of signers is the site's
