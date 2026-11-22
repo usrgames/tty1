@@ -7,6 +7,7 @@ tty1 ls                 # the games, what you have, and what is newer
 tty1 install rustwake   # bring a game home
 tty1 run rustwake       # start it
 tty1 update             # bring everything up to date, tty1 included
+tty1 doctor             # say what this terminal can do
 ```
 
 **There is no release of `tty1` yet, and no game has one it can install.** Until then it builds from this repository with `go build`, and `tty1 ls` says of every game that it has no release yet.
@@ -19,6 +20,14 @@ tty1 update             # bring everything up to date, tty1 included
 - **It does not go back.** A "newest" release that is older than the one installed is refused, since that is what a release put back by someone else looks like.
 - **The list of games is not trusted.** It says what to offer. Whatever name it is given, `tty1` installs only what the studio signed under that exact name.
 - **`tty1` replaces itself only if a release built it.** Built with `go install`, it says to update the same way.
+
+## doctor
+
+`tty1 doctor` looks at the terminal it is running in and says what it found: whether it tells a game when a key is let go, whether it shows 24-bit colour, and how big it is, with what to change where something can be. It asks the terminal the question a game asks as it starts, draws nothing, and is done in a quarter second at most. A key pressed in that moment is lost.
+
+It fails only where a game could not run at all: where its input or its output is not a terminal. A terminal that plays the games less well is told so, and that is no failure.
+
+It says what the page `/terminals` of usr.games says, in the page's words. A test holds every sentence it borrows to that page.
 
 ## Where things are
 
@@ -34,7 +43,7 @@ Three variables point it elsewhere, for trying it out: `TTY1_HOME` for the folde
 
 | Path | What |
 |---|---|
-| `main.go` | Wires the commands to this machine: its folders, its clock, the real network. |
+| `main.go` | Wires the commands to this machine: its folders, its clock, the real network, its terminal. |
 | `internal/cli` | The commands, and the order their steps go in. |
 | `internal/fetch` | The two things asked of the network: the site's list, and a program's releases. |
 | `internal/release` | Decides whether a release is the studio's: checks the signature of its manifest, then each file against the manifest. |

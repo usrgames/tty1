@@ -4,6 +4,7 @@
 //	tty1 ls
 //	tty1 install rustwake
 //	tty1 run rustwake
+//	tty1 doctor
 //
 // It asks the site for the list of games and each game's repository for its newest release,
 // checks a release against the studio's signature before anything of it is unpacked, and keeps
@@ -22,6 +23,8 @@ import (
 	"runtime/debug"
 	"syscall"
 	"time"
+
+	"glonk.dev/engine"
 
 	"usr.games/tty1/internal/cli"
 	"usr.games/tty1/internal/fetch"
@@ -71,6 +74,8 @@ func main() {
 		// The game takes this process's place: it gets the terminal, the signals and the exit
 		// status with no tty1 left standing between.
 		Exec: func(program string, args []string) error { return syscall.Exec(program, args, os.Environ()) },
+		// The one thing tty1 asks of glonk: the question a game asks its terminal as it starts.
+		Probe: func() (engine.Terminal, error) { return engine.Probe(engine.Config{}) },
 	}
 	os.Exit(app.Run(ctx, os.Args[1:]))
 }
