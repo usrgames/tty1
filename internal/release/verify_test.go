@@ -192,7 +192,7 @@ func TestOnlyTheStudiosKindOfListIsRead(t *testing.T) {
 		{"a key that is not base64", who + ` cert-authority,namespaces="` + who + `" ` + keyKind + " !!!\n", 0},
 		{"a key cut short", who + ` cert-authority,namespaces="` + who + `" ` + keyKind + " " + k[:20] + "\n", 0},
 	} {
-		s, err := parseSigners([]byte(tt.list))
+		s, err := ParseSigners([]byte(tt.list))
 		if (err == nil) != (tt.roots > 0) || len(s.roots) != tt.roots && err == nil {
 			t.Errorf("%s: wanted %d roots, got %d and %v", tt.what, tt.roots, len(s.roots), err)
 		}

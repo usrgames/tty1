@@ -39,10 +39,31 @@ type File struct {
 	Arch   string `json:"arch,omitempty"`
 }
 
-// Open is the one way to a manifest. It checks the signature of the bytes first, then reads
-// them, then checks that this is the manifest asked for: a manifest the studio did sign, of
-// another program or of an older release, is refused like any other that is not wanted.
+// Open returns the manifest of one release of a program. It checks the signature of the bytes
+// first, then reads them, then checks that this is the manifest asked for: a manifest the studio
+// did sign, of another program or of another release, is refused like any other not wanted.
 func (s Signers) Open(manifest, sig []byte, name, version string, now time.Time) (Manifest, error) {
+	m, err := s.open(manifest, sig, name, now)
+	if err == nil && m.Version != version {
+		return Manifest{}, fmt.Errorf("%w: it is %s %s, and %s %s was asked for", ErrOther, m.Name, m.Version, name, version)
+	}
+	return m, err
+}
+
+// Newest returns the manifest of a program's newest release, whose version nobody knows until
+// the manifest says it. Everything else is checked as Open checks it. What Newest cannot know is
+// what is installed: a caller must itself refuse a "newest" that is older than what it has, for
+// that is what an old release put back in a new one's place looks like.
+func (s Signers) Newest(manifest, sig []byte, name string, now time.Time) (Manifest, error) {
+	m, err := s.open(manifest, sig, name, now)
+	if err == nil && m.Version == "" {
+		return Manifest{}, fmt.Errorf("%w: it names no version", ErrManifest)
+	}
+	return m, err
+}
+
+// open is the one way to a manifest: the signature, then the reading, then the shape.
+func (s Signers) open(manifest, sig []byte, name string, now time.Time) (Manifest, error) {
 	var m Manifest
 	if err := s.Verify(manifest, sig, now); err != nil {
 		return m, err
@@ -53,8 +74,8 @@ func (s Signers) Open(manifest, sig []byte, name, version string, now time.Time)
 	if m.Schema != 1 {
 		return Manifest{}, fmt.Errorf("%w: it is of kind %d, and this knows kind 1: a newer tty1 may read it", ErrManifest, m.Schema)
 	}
-	if m.Name != name || m.Version != version {
-		return Manifest{}, fmt.Errorf("%w: it is %s %s, and %s %s was asked for", ErrOther, m.Name, m.Version, name, version)
+	if m.Name != name {
+		return Manifest{}, fmt.Errorf("%w: it is %s, and %s was asked for", ErrOther, m.Name, name)
 	}
 	seen := map[string]bool{}
 	for _, f := range m.Files {

@@ -92,7 +92,7 @@ func TestItsVerdictIsThatOfTheRealSSHKeygen(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(o.dir, "allowed_signers"), []byte(list), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	signers, err := parseSigners([]byte(list))
+	signers, err := ParseSigners([]byte(list))
 	if err != nil {
 		t.Fatal(err)
 	}
