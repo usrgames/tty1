@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Never download a different Go than the one the job asked for.
+env:
+  GOTOOLCHAIN: local
+
+# A newer push to the same branch or pull request makes the older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Formatting, vet and the tests. The tests of the signature check ask the runner's own
+  # ssh-keygen for its verdict on freshly made keys, and tty1's must be the same.
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.27"
+      - name: go.mod is tidy
+        run: go mod tidy -diff
+      - run: make check
+      # The one key tty1 trusts is built in from a copy of the site's published list. A copy
+      # that drifted would make tty1 refuse every release, or trust a key the site no longer names.
+      - name: the built-in list of signers is the site's
+        run: curl -fsSL https://raw.githubusercontent.com/usrgames/usr.games/main/site/etc/allowed_signers | cmp - internal/release/allowed_signers
