@@ -82,6 +82,12 @@ func TestNoAlteredCopyOfARealSignatureIsAccepted(t *testing.T) {
 	if err := Studio().Verify(manifest, armor(block.Bytes), now); err != nil {
 		t.Fatalf("the signature, armored again and unchanged: %v", err)
 	}
+	// Nothing may stand before the armor, not even an empty line: ssh-keygen refuses that too.
+	for _, before := range []string{"\n", " ", "a line before it\n", "-----BEGIN NOTHING-----\n-----END NOTHING-----\n"} {
+		if err := Studio().Verify(manifest, append([]byte(before), sig...), now); !errors.Is(err, ErrMalformed) {
+			t.Fatalf("the signature with %q before it: wanted %v, got %v", before, ErrMalformed, err)
+		}
+	}
 	for i := range block.Bytes {
 		for _, flip := range []byte{0x01, 0x80, 0xff} {
 			changed := bytes.Clone(block.Bytes)

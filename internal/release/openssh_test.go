@@ -97,6 +97,7 @@ func TestItsVerdictIsThatOfTheRealSSHKeygen(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	armored := o.sign("release-cert.pub", who, "manifest")
 	for _, tt := range []struct {
 		what     string
 		message  []byte
@@ -119,6 +120,10 @@ func TestItsVerdictIsThatOfTheRealSSHKeygen(t *testing.T) {
 		{"a certificate that has ended", message, o.sign("ended-cert.pub", who, "manifest"), ErrEnded, false},
 		{"a certificate that is not good yet", message, o.sign("notyet-cert.pub", who, "manifest"), ErrNotYet, false},
 		{"a certificate with a condition", message, o.sign("condition-cert.pub", who, "manifest"), ErrCondition, true},
+		// The armor, which ssh-keygen wants from the first byte on, with plain line ends.
+		{"words before the signature", message, append([]byte("a line before it\n"), armored...), ErrMalformed, false},
+		{"an empty line before the signature", message, append([]byte("\n"), armored...), ErrMalformed, false},
+		{"words after the signature", message, append(bytes.Clone(armored), "a line after it\n"...), ErrMalformed, true},
 	} {
 		if err := os.WriteFile(filepath.Join(o.dir, "sig"), tt.sig, 0o644); err != nil {
 			t.Fatal(err)

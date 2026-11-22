@@ -1,6 +1,7 @@
 package release
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"encoding/binary"
 	"encoding/pem"
@@ -143,8 +144,10 @@ type envelope struct {
 
 // parseEnvelope reads an armored SSH signature. It checks nothing but the shape.
 func parseEnvelope(armored []byte) (*envelope, error) {
+	// Go passes over whatever stands before the armor. ssh-keygen wants the armor from the first
+	// byte on, and the two must give one verdict, so nothing may stand before it here either.
 	block, rest := pem.Decode(armored)
-	if block == nil || block.Type != "SSH SIGNATURE" || len(block.Headers) != 0 || strings.TrimSpace(string(rest)) != "" {
+	if block == nil || !bytes.HasPrefix(armored, []byte("-----BEGIN ")) || block.Type != "SSH SIGNATURE" || len(block.Headers) != 0 || strings.TrimSpace(string(rest)) != "" {
 		return nil, errors.New("not one armored SSH signature")
 	}
 	r := &reader{rest: block.Bytes}
