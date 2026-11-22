@@ -28,6 +28,9 @@ var (
 	ErrAnswer      = errors.New("gave an answer tty1 cannot use")
 )
 
+// MaxGames is how many games a list may hold.
+const MaxGames = 256
+
 // What a small file may weigh at most. A list or a manifest is a few thousand bytes.
 const (
 	maxList      = 1 << 20
@@ -135,10 +138,20 @@ func (c Client) Games(ctx context.Context) ([]Game, error) {
 	if doc.Schema != 1 {
 		return nil, fmt.Errorf("%w: a list of games of kind %d, and this knows kind 1: a newer tty1 may read it", ErrAnswer, doc.Schema)
 	}
+	// The caller asks about every game it is given, so the list may not make it ask without
+	// end: no more games than an arcade could hold, and each of them once.
+	if len(doc.Games) > MaxGames {
+		return nil, fmt.Errorf("%w: a list of %d games, and this reads %d at most", ErrAnswer, len(doc.Games), MaxGames)
+	}
+	seen := map[string]bool{}
 	for _, g := range doc.Games {
 		if !Name(g.Name) {
 			return nil, fmt.Errorf("%w: a game named %q", ErrAnswer, g.Name)
 		}
+		if seen[g.Name] {
+			return nil, fmt.Errorf("%w: a list that names %s twice", ErrAnswer, g.Name)
+		}
+		seen[g.Name] = true
 	}
 	return doc.Games, nil
 }

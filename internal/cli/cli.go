@@ -14,6 +14,7 @@ import (
 	"sync"
 	"text/tabwriter"
 	"time"
+	"unicode"
 
 	"glonk.dev/engine"
 
@@ -48,8 +49,13 @@ type App struct {
 	Manual []byte
 }
 
-// Names no game may have: they are the studio's own programs, which install another way.
-var reserved = map[string]bool{"tty1": true, "arcade": true}
+// Names no game may have: they are the studio's own programs, which install another way. The
+// studio signs these with the key it signs games with, so nothing but this list keeps one from
+// being installed as a game: a program of the studio's that is no game is added here.
+var reserved = map[string]bool{"tty1": true, "arcade": true, "relay": true}
+
+// atOnce is how many games ls asks about at the same time.
+const atOnce = 8
 
 const usage = `tty1 is the usr.games launcher: it brings the games home, keeps them current, and starts them.
 
@@ -126,10 +132,24 @@ func (a *App) misuse(what string) int {
 // status prints why something could not be done, if it could not, and returns the exit status.
 func (a *App) status(err error) int {
 	if err != nil {
-		fmt.Fprintln(a.Err, err)
+		// An error can carry what the network said: the name in a certificate, the address of
+		// a redirect. It goes to a terminal as words, like everything else that was fetched.
+		fmt.Fprintln(a.Err, Clean(err.Error()))
 		return 1
 	}
 	return 0
+}
+
+// installed returns the installed games whose folders have a game's name. A folder of any other
+// name on the shelf was not put there by tty1, and is neither printed nor asked about.
+func (a *App) installed() []string {
+	var names []string
+	for _, name := range a.Shelf.Installed() {
+		if fetch.Name(name) {
+			names = append(names, name)
+		}
+	}
+	return names
 }
 
 // newest asks for a program's newest release and checks it. The manifest it returns is one the
@@ -158,8 +178,8 @@ func (a *App) ls(ctx context.Context) int {
 	games, err := a.Net.Games(ctx)
 	if err != nil {
 		// With no list, what is installed is still worth showing: that needs no network.
-		fmt.Fprintln(a.Err, "The list of games could not be read:", err)
-		installed := a.Shelf.Installed()
+		fmt.Fprintln(a.Err, "The list of games could not be read:", Clean(err.Error()))
+		installed := a.installed()
 		if len(installed) == 0 {
 			return 1
 		}
@@ -172,7 +192,7 @@ func (a *App) ls(ctx context.Context) int {
 	for _, g := range games {
 		listed[g.Name] = true
 	}
-	for _, name := range a.Shelf.Installed() {
+	for _, name := range a.installed() {
 		if !listed[name] {
 			games = append(games, fetch.Game{Name: name, Blurb: "(no longer on the list)"})
 		}
@@ -180,11 +200,15 @@ func (a *App) ls(ctx context.Context) int {
 
 	// Each game's newest release is asked for at once: a slow answer for one holds up none.
 	states := make([]string, len(games))
+	slots := make(chan struct{}, atOnce)
 	var wg sync.WaitGroup
 	for i, g := range games {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			// A few at a time: the list decides how many games there are, and it is not trusted.
+			slots <- struct{}{}
+			defer func() { <-slots }()
 			states[i] = a.state(ctx, g.Name)
 		}()
 	}
@@ -193,7 +217,7 @@ func (a *App) ls(ctx context.Context) int {
 	w := tabwriter.NewWriter(a.Out, 0, 0, 2, ' ', 0)
 	for i, g := range games {
 		// The list is the site's word, not the studio's signature: it is printed as words only.
-		fmt.Fprintf(w, "%s(6)\t%s\t%s\t%s\n", g.Name, Clean(g.Players), states[i], Clean(g.Blurb))
+		fmt.Fprintf(w, "%s(6)\t%s\t%s\t%s\n", g.Name, Clean(g.Players), Clean(states[i]), Clean(g.Blurb))
 	}
 	w.Flush()
 	if len(games) == 0 {
@@ -267,7 +291,7 @@ func (a *App) install(ctx context.Context, name string, mustHave bool) error {
 		return fmt.Errorf("%s %s could not be put in place: %w", name, newest, err)
 	}
 	if installed {
-		fmt.Fprintf(a.Out, "%s is now %s, up from %s.\n", name, newest, have)
+		fmt.Fprintf(a.Out, "%s is now %s, up from %s.\n", name, newest, Clean(have))
 	} else {
 		fmt.Fprintf(a.Out, "%s %s is home. Start it with: tty1 run %s\n", name, newest, name)
 	}
@@ -328,14 +352,12 @@ func (a *App) update(ctx context.Context, rest []string) int {
 		return a.status(a.install(ctx, rest[0], true))
 	}
 	failed := false
-	for _, name := range a.Shelf.Installed() {
-		if err := a.install(ctx, name, true); err != nil {
-			fmt.Fprintln(a.Err, err)
+	for _, name := range a.installed() {
+		if a.status(a.install(ctx, name, true)) != 0 {
 			failed = true
 		}
 	}
-	if err := a.updateSelf(ctx); err != nil {
-		fmt.Fprintln(a.Err, err)
+	if a.status(a.updateSelf(ctx)) != 0 {
 		failed = true
 	}
 	if failed {
@@ -379,13 +401,25 @@ func (a *App) updateSelf(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("tty1 %s was not installed: its archive holds no tty1", newest)
 	}
-	beside := a.Self + ".new"
-	if err := os.WriteFile(beside, program, 0o755); err != nil {
+	// A new file of a name nobody could have guessed, never one that may already be there: a
+	// link left beside tty1 would otherwise be written through, and tty1 would become that link.
+	beside, err := os.CreateTemp(filepath.Dir(a.Self), ".tty1-new-")
+	if err != nil {
 		return fmt.Errorf("tty1 could not write beside itself, at %s, so it left itself as it is: %w", a.Self, err)
 	}
-	if err := os.Rename(beside, a.Self); err != nil {
-		os.Remove(beside)
-		return fmt.Errorf("tty1 could not replace itself at %s: %w", a.Self, err)
+	defer os.Remove(beside.Name())
+	_, err = beside.Write(program)
+	if cerr := beside.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Chmod(beside.Name(), 0o755)
+	}
+	if err == nil {
+		err = os.Rename(beside.Name(), a.Self)
+	}
+	if err != nil {
+		return fmt.Errorf("tty1 could not replace itself at %s, so it left itself as it is: %w", a.Self, err)
 	}
 	fmt.Fprintf(a.Out, "tty1 is now %s, up from %s.\n", newest, current)
 	return nil
@@ -409,7 +443,10 @@ func (a *App) run(name string, args []string) int {
 // what a server says is printed for a person, and must stay words.
 func Clean(s string) string {
 	return strings.Map(func(r rune) rune {
-		if r < ' ' || r == 0x7f {
+		// Every control character, the ones above 0x7f among them, which some terminals take
+		// as the start of a command just as they take ESC. And the marks that turn the
+		// direction of text around, or break a line, which let words be shown as other words.
+		if unicode.IsControl(r) || unicode.Is(unicode.Bidi_Control, r) || r == '\u2028' || r == '\u2029' {
 			return -1
 		}
 		return r

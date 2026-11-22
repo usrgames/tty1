@@ -43,6 +43,7 @@ func into(dir string, r io.Reader, maxFiles int, maxBytes int64) ([]string, erro
 	tr := tar.NewReader(gz)
 
 	var names []string
+	folder := false
 	left := maxBytes
 	for {
 		h, err := tr.Next()
@@ -52,8 +53,13 @@ func into(dir string, r io.Reader, maxFiles int, maxBytes int64) ([]string, erro
 		if err != nil {
 			return refuse("it cannot be read to its end: %v", err)
 		}
-		// The top folder itself, which tar writes as "./", is no file and is passed over.
+		// The top folder itself, which tar writes as "./", is no file and is passed over: once,
+		// as tar writes it. Any number of them would be read at no cost to the budgets below.
 		if h.Typeflag == tar.TypeDir && (h.Name == "./" || h.Name == ".") {
+			if folder {
+				return refuse("it names its own folder twice")
+			}
+			folder = true
 			continue
 		}
 		name := strings.TrimPrefix(h.Name, "./")

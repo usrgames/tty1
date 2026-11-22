@@ -289,7 +289,7 @@ func TestWhatCannotBeAGameIsNotAskedFor(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { asked++ }))
 	defer srv.Close()
 	w.app.Net.Releases = srv.URL
-	for _, name := range []string{"tty1", "arcade", "../etc", "Rustwake", "rust wake", "rustwake/../../x", ""} {
+	for _, name := range []string{"tty1", "arcade", "relay", "../etc", "Rustwake", "rust wake", "rustwake/../../x", ""} {
 		for _, command := range []string{"install", "update", "run"} {
 			if status, _, errs := w.run(command, name); status != 1 || errs == "" {
 				t.Errorf("%s %q: wanted it refused with a reason, got %d: %s", command, name, status, errs)
@@ -371,9 +371,9 @@ func TestAGameInstalledAndNoLongerListedIsStillShown(t *testing.T) {
 // may move the cursor or change a colour in the player's terminal.
 func TestTheListIsPrintedAsWordsOnly(t *testing.T) {
 	w := newWorld(t)
-	w.files["/etc/games.json"] = []byte(`{"schema": 1, "games": [{"name": "rustwake", "players": "1p\u001b[2J", "blurb": "Clear\u001b[31m the\u0007 plant.\r\nsecond line"}]}`)
+	w.files["/etc/games.json"] = []byte(`{"schema": 1, "games": [{"name": "rustwake", "players": "1p\u001b[2J\u009b2J", "blurb": "Clear\u001b[31m the\u0007 plant.\r\nsecond\u2028 line\u202e"}]}`)
 	status, out, _ := w.run("ls")
-	if status != 0 || strings.ContainsAny(out, "\x1b\x07\r") || strings.Count(out, "\n") != 1 || !strings.Contains(out, "Clear[31m the plant.second line") {
+	if status != 0 || len(acted(out)) != 0 || strings.Count(out, "\n") != 1 || !strings.Contains(out, "Clear[31m the plant.second line") {
 		t.Errorf("wanted one line of words, got %d: %q", status, out)
 	}
 }
@@ -408,8 +408,8 @@ func TestTty1ReplacesItselfWholeOrNotAtAll(t *testing.T) {
 	if info, _ := os.Stat(w.app.Self); info.Mode().Perm() != 0o755 {
 		t.Errorf("wanted the new tty1 to be a program, got mode %o", info.Mode().Perm())
 	}
-	if _, err := os.Stat(w.app.Self + ".new"); err == nil {
-		t.Error("wanted nothing left beside the new tty1")
+	if left, _ := os.ReadDir(filepath.Dir(w.app.Self)); len(left) != 1 {
+		t.Errorf("wanted nothing left beside the new tty1, got %d entries in its folder", len(left))
 	}
 	w.clean()
 
