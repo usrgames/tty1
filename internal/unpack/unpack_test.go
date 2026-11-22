@@ -120,6 +120,8 @@ func TestWhatIsNotAReleasesArchiveIsRefused(t *testing.T) {
 		{"the same file twice", archive(t, good, good)},
 		{"no file at all", archive(t)},
 		{"only the folder itself", archive(t, entry{name: "./", kind: tar.TypeDir})},
+		{"the folder itself twice", archive(t, entry{name: "./", kind: tar.TypeDir}, entry{name: "./", kind: tar.TypeDir}, good)},
+		{"the folder itself again after a file", archive(t, entry{name: "./", kind: tar.TypeDir}, good, entry{name: ".", kind: tar.TypeDir})},
 		{"something that is not gzipped", []byte("plain text")},
 		{"gzip of something that is not a tar", func() []byte {
 			var b bytes.Buffer

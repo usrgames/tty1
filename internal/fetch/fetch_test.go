@@ -3,6 +3,7 @@ package fetch
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -47,6 +48,23 @@ func TestTheSitesListIsRead(t *testing.T) {
 	}
 }
 
+// manyGames returns the entries of a list of n games, each with a name of its own.
+func manyGames(n int) string {
+	var games []string
+	for i := range n {
+		games = append(games, fmt.Sprintf(`{"name": "game%d"}`, i))
+	}
+	return strings.Join(games, ",")
+}
+
+// As many games as a list may hold is a list like any other.
+func TestAFullListIsRead(t *testing.T) {
+	c, _ := serve(t, map[string]string{"/etc/games.json": `{"schema": 1, "games": [` + manyGames(MaxGames) + `]}`})
+	if got, err := c.Games(context.Background()); err != nil || len(got) != MaxGames {
+		t.Errorf("wanted %d games and no error, got %d and %v", MaxGames, len(got), err)
+	}
+}
+
 func TestAListTty1CannotUseIsRefusedWhole(t *testing.T) {
 	for what, body := range map[string]string{
 		"no list where one should be":   "404",
@@ -58,6 +76,8 @@ func TestAListTty1CannotUseIsRefusedWhole(t *testing.T) {
 		"a game with a capital":         `{"schema": 1, "games": [{"name": "Rustwake"}]}`,
 		"a game with no name":           `{"schema": 1, "games": [{"players": "1p"}]}`,
 		"a list far too long":           `{"schema": 1, "games": [], "padding": "` + strings.Repeat("x", maxList) + `"}`,
+		"a game named twice":            `{"schema": 1, "games": [{"name": "rustwake"}, {"name": "skyspear"}, {"name": "rustwake"}]}`,
+		"more games than a list holds":  `{"schema": 1, "games": [` + manyGames(MaxGames+1) + `]}`,
 	} {
 		c, _ := serve(t, map[string]string{"/etc/games.json": body})
 		games, err := c.Games(context.Background())
