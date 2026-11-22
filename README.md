@@ -80,6 +80,10 @@ That is a choice. No library outside this repository can change what `tty1` trus
 - **Fuzzing.** `make fuzz` throws made-up signatures at the reader: it must refuse them and never crash.
 - **A stand-in for the network.** The commands are tested against a local server that plays the site and the releases, with releases signed inside the test. Every way an install has to stop is tried, and each time the game that was there must still run.
 
+## One dependency
+
+`tty1` depends on [glonk](https://glonk.dev), the engine the games are built on, for one call: the question `doctor` asks the terminal. The packages that decide what is installed and run (`release`, `unpack`, `version`, `fetch` and `shelf`) import the standard library alone, and a test holds that.
+
 ## Working on it
 
 ```sh
