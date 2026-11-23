@@ -1,0 +1,36 @@
+name: release
+
+# A tag v* releases tty1 through the workflow every usr.games repository shares: built, signed
+# once a person has approved, tried on three kinds of machine, then published. What it does,
+# and how to rehearse it or sign a release again, is in RELEASES.md of usrgames/.github.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      rehearsal:
+        description: "Try the whole release with keys made for the run. Nothing is published."
+        type: boolean
+        default: false
+      again:
+        description: "Run on a tag: sign that release again, under the current certificate."
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    uses: usrgames/.github/.github/workflows/release.yml@4c0b30bab1c73ab727d2e273a0b2c506479df02a
+    # The shared workflow's last job publishes the release. Every other job there only reads.
+    permissions:
+      contents: write
+    with:
+      name: tty1
+      # The page goes in each archive, and is shipped as HTML for the site.
+      man: man/tty1.1
+      rehearsal: ${{ inputs.rehearsal || false }}
+      again: ${{ inputs.again || false }}
+    secrets:
+      RELEASE_KEY: ${{ secrets.RELEASE_KEY }}
