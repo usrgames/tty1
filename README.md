@@ -107,7 +107,9 @@ That is a choice. No library outside this repository can change what `tty1` trus
 make check
 ```
 
-formats, tests and vets, for 64-bit and for 32-bit, since this code is all lengths and offsets.
+formats, tests and vets, for 64-bit and for 32-bit, since this code is all lengths and offsets. Where the machine has `mandoc`, it also holds the manual page to formatting without a warning.
+
+A tag `v*` releases `tty1` through the workflow every usr.games repository shares: built, signed once a person has approved, tried on three kinds of machine, then published. [RELEASES.md](https://github.com/usrgames/.github/blob/main/RELEASES.md) says how, and how to rehearse it.
 
 When the site's list of signers changes, `internal/release/allowed_signers` changes with it, and so does the fingerprint in the test that pins it. CI compares the file with the site's.
 
