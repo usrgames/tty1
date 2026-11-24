@@ -11,9 +11,15 @@ tty1 doctor             # say what this terminal can do
 tty1 man rustwake       # a game's manual page, or tty1's own with no name
 ```
 
-No game has a release yet, so `tty1 ls` says so of each.
-
 ## Install
+
+**In one line.** The installer checks the studio's signature on tty1's newest release before it keeps anything, and puts `tty1` in `~/.local/bin`:
+
+```sh
+curl -fsSL https://usr.games/install.sh | sh
+```
+
+**With Go:** `go install usr.games/tty1@latest`.
 
 **From a release.** Take the archive for your system from [the latest release](https://github.com/usrgames/tty1/releases/latest), with `manifest.json` and `manifest.json.sig`, and check them as [KEYS.md](https://github.com/usrgames/usr.games/blob/main/KEYS.md#check-a-release-by-hand) says. Then unpack it and put `tty1` where your shell finds it:
 
@@ -26,7 +32,6 @@ The archive holds `tty1`, its `LICENSE`, and its manual page, `tty1.1`.
 
 **From the source.** `go build` in a clone of this repository.
 
-**Not yet:** the one-line installer, and `go install usr.games/tty1@latest`. Both need usr.games, and its doors are not open.
 
 ## What it does, and what it will not do
 
