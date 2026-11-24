@@ -11,7 +11,7 @@ tty1 doctor             # say what this terminal can do
 tty1 man rustwake       # a game's manual page, or tty1's own with no name
 ```
 
-No game has a release yet, so `tty1 ls` says so of each.
+A game with no release yet is listed as having none.
 
 ## Install
 
@@ -51,9 +51,10 @@ It says what the page `/terminals` of usr.games says, in the page's words. A tes
 |---|---|
 | Installed games | `~/.local/share/tty1/games/NAME/`, or under `$XDG_DATA_HOME`. Each holds what the archive held and the manifest that vouched for it. Nothing is put on your `PATH`; removing the folder removes everything `tty1` installed. |
 | The list of games | `https://usr.games/etc/games.json` |
-| A game's releases | `https://github.com/usrgames/NAME/releases` |
+| A game's releases | `https://github.com/usrgames/NAME.6/releases`: each game's own repository is private, and its releases are published from one beside it, named for its manual page |
+| `tty1`'s own releases | `https://github.com/usrgames/tty1/releases` |
 
-Three variables point it elsewhere, for trying it out: `TTY1_HOME` for the folder, `TTY1_SITE` for the site, `TTY1_RELEASES` for where releases are. None of them changes whose signature it accepts.
+Three variables point it elsewhere, for trying it out: `TTY1_HOME` for the folder, `TTY1_SITE` for the site, `TTY1_RELEASES` for where the release repositories are. None of them changes whose signature it accepts.
 
 ## What is here
 
