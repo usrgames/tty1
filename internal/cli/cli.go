@@ -379,8 +379,9 @@ func (a *App) updateSelf(ctx context.Context) error {
 		return fmt.Errorf("tty1 cannot tell its own version, %q, so it will not replace itself", a.Version)
 	}
 	m, newest, _, err := a.newest(ctx, "tty1")
+	// This tty1 came from a release, so an answer of no release at all is the answer that is wrong.
 	if errors.Is(err, fetch.ErrNoRelease) {
-		return nil
+		return fmt.Errorf("GitHub answered that tty1 has no release, though this one came from a release: tty1 left itself as it is, so try again later")
 	}
 	if err != nil {
 		return err
