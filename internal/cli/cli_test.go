@@ -177,6 +177,7 @@ func (w *world) clean() {
 
 func TestAGameIsBroughtHomeStartedAndKeptCurrent(t *testing.T) {
 	w := newWorld(t)
+	w.publish("tty1", "v1.0.0", rel{}) // tty1's own release, the one it runs, as GitHub always has
 	w.publish("rustwake", "v0.1.0", rel{})
 
 	if status, out, errs := w.run("ls"); status != 0 || !strings.Contains(out, "rustwake(6)") || !strings.Contains(out, "not installed, v0.1.0 is out") || !strings.Contains(out, "breakshot(6)") || !strings.Contains(out, "no release yet") {
@@ -320,6 +321,7 @@ func TestWhatCannotBeAGameIsNotAskedFor(t *testing.T) {
 // Keeping a game current is not bringing it home: a game that is not installed is left alone.
 func TestUpdateDoesNotInstall(t *testing.T) {
 	w := newWorld(t)
+	w.publish("tty1", "v1.0.0", rel{}) // tty1's own release, the one it runs, as GitHub always has
 	w.publish("rustwake", "v0.1.0", rel{})
 	if status, _, errs := w.run("update", "rustwake"); status != 1 || !strings.Contains(errs, "tty1 install rustwake") {
 		t.Errorf("update of a game not installed: wanted to be told how to install it, got %d: %s", status, errs)
@@ -398,8 +400,9 @@ func TestTty1ReplacesItselfWholeOrNotAtAll(t *testing.T) {
 	}
 
 	w := newWorld(t)
-	if status, out, errs := w.run("update"); status != 0 || read(w) != "the tty1 that is running" {
-		t.Errorf("with no release of tty1: wanted it left alone, got %d: %s%s", status, out, errs)
+	// A tty1 from a release knows there is one, so an answer of none is said to be wrong.
+	if status, out, errs := w.run("update"); status != 1 || !strings.Contains(errs, "has no release, though this one came from a release") || read(w) != "the tty1 that is running" {
+		t.Errorf("with no release of tty1: wanted it left alone and the answer called wrong, got %d: %s%s", status, out, errs)
 	}
 	newer(w, "v1.0.0", rel{})
 	if status, out, _ := w.run("update"); status != 0 || !strings.Contains(out, "tty1 v1.0.0 is current") || read(w) != "the tty1 that is running" {
