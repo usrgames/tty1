@@ -93,16 +93,24 @@ func TestAListTty1CannotUseIsRefusedWhole(t *testing.T) {
 
 func TestTheNewestReleaseIsAskedOfItsRepository(t *testing.T) {
 	c, _ := serve(t, map[string]string{
-		"/usrgames/rustwake/releases/latest/download/manifest.json":     `{"schema": 1}`,
-		"/usrgames/rustwake/releases/latest/download/manifest.json.sig": "a signature",
-		"/usrgames/nosig/releases/latest/download/manifest.json":        `{"schema": 1}`,
-		"/usrgames/broken/releases/latest/download/manifest.json":       "500",
-		"/usrgames/huge/releases/latest/download/manifest.json":         strings.Repeat("x", maxManifest+1),
-		"/usrgames/rustwake/releases/download/v1.0.0/rustwake.tar.gz":   "the archive",
+		"/usrgames/rustwake.6/releases/latest/download/manifest.json":     `{"schema": 1}`,
+		"/usrgames/rustwake.6/releases/latest/download/manifest.json.sig": "a signature",
+		"/usrgames/nosig.6/releases/latest/download/manifest.json":        `{"schema": 1}`,
+		"/usrgames/broken.6/releases/latest/download/manifest.json":       "500",
+		"/usrgames/huge.6/releases/latest/download/manifest.json":         strings.Repeat("x", maxManifest+1),
+		"/usrgames/rustwake.6/releases/download/v1.0.0/rustwake.tar.gz":   "the archive",
+		"/usrgames/tty1/releases/latest/download/manifest.json":           `{"schema": 1, "name": "tty1"}`,
+		"/usrgames/tty1/releases/latest/download/manifest.json.sig":       "tty1's signature",
+		// A game's own repository is private and answers nothing; only its release repository does.
+		"/usrgames/skyspear/releases/latest/download/manifest.json": `{"schema": 1}`,
 	})
 	manifest, sig, err := c.Newest(context.Background(), "rustwake")
 	if err != nil || string(manifest) != `{"schema": 1}` || string(sig) != "a signature" {
 		t.Errorf("wanted the manifest and its signature as served, got %q, %q and %v", manifest, sig, err)
+	}
+	// tty1's own releases stay in its own repository.
+	if manifest, sig, err := c.Newest(context.Background(), "tty1"); err != nil || string(sig) != "tty1's signature" || !strings.Contains(string(manifest), "tty1") {
+		t.Errorf("wanted tty1's own release from usrgames/tty1, got %q, %q and %v", manifest, sig, err)
 	}
 	for name, want := range map[string]error{"skyspear": ErrNoRelease, "nosig": ErrAnswer, "broken": ErrAnswer, "huge": ErrAnswer} {
 		m, s, err := c.Newest(context.Background(), name)

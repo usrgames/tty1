@@ -203,7 +203,7 @@ func TestAFolderOnTheShelfThatIsNoGameIsLeftOut(t *testing.T) {
 			t.Errorf("%s: wanted the three folders left out, got %v in: %q %q", command, found, out, errs)
 		}
 		for _, p := range asked {
-			if !strings.HasPrefix(p, "/rustwake/") && !strings.HasPrefix(p, "/breakshot/") && !strings.HasPrefix(p, "/tty1/") {
+			if !strings.HasPrefix(p, "/rustwake.6/") && !strings.HasPrefix(p, "/breakshot.6/") && !strings.HasPrefix(p, "/tty1/") {
 				t.Errorf("%s: wanted nothing asked about a folder that is no game, and %s was", command, p)
 			}
 		}

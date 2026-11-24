@@ -156,7 +156,11 @@ func (w *world) publish(name, version string, r rel) {
 	file := name + "_" + r.os + "_amd64.tar.gz"
 	manifest := []byte(fmt.Sprintf(`{"schema": %d, "name": %q, "version": %q, "files": [{"name": %q, "size": %d, "sha256": %q, "os": %q, "arch": "amd64"}]}`,
 		r.schema, r.manifestName, version, file, len(r.archive), hex.EncodeToString(sum[:]), r.os))
-	base := "/usrgames/" + name + "/releases/"
+	repo := name + ".6"
+	if name == "tty1" {
+		repo = name
+	}
+	base := "/usrgames/" + repo + "/releases/"
 	w.files[base+"latest/download/manifest.json"] = manifest
 	w.files[base+"latest/download/manifest.json.sig"] = r.signer.Sign(manifest)
 	w.files[base+"download/"+version+"/"+file] = r.served
@@ -246,7 +250,7 @@ func TestAnInstallStopsBeforeAnythingIsPutInPlace(t *testing.T) {
 		}, "not what the release names"},
 		{"a release whose archive is missing", func(w *world) {
 			w.publish("rustwake", "v0.2.0", rel{})
-			delete(w.files, "/usrgames/rustwake/releases/download/v0.2.0/rustwake_linux_amd64.tar.gz")
+			delete(w.files, "/usrgames/rustwake.6/releases/download/v0.2.0/rustwake_linux_amd64.tar.gz")
 		}, "does not hold it"},
 		{"a signed archive that reaches out of its folder", func(w *world) {
 			w.publish("rustwake", "v0.2.0", rel{archive: pack(w.t, entry{name: "rustwake", body: "x"}, entry{name: "../escaped", body: "x"})})
