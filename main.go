@@ -11,7 +11,8 @@
 // checks a release against the studio's signature before anything of it is unpacked, and keeps
 // what it installs in one folder of its own, ~/.local/share/tty1. Three variables point it
 // elsewhere, for trying it out: TTY1_HOME for that folder, TTY1_SITE for the site, and
-// TTY1_RELEASES for where releases are. None of them changes whose signature it accepts.
+// TTY1_RELEASES for where the release repositories are. None of them changes whose signature it
+// accepts.
 package main
 
 import (

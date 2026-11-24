@@ -41,7 +41,7 @@ const (
 // Client asks the site and the releases.
 type Client struct {
 	Site     string       // where etc/games.json is, such as https://usr.games
-	Releases string       // where each program's releases are: Releases/NAME/releases/...
+	Releases string       // where the release repositories are: Releases/NAME.6 for a game, Releases/tty1 for tty1
 	Agent    string       // how tty1 names itself, such as tty1/v0.1.0
 	HTTP     *http.Client // nil means one that follows a redirect only to https
 }
@@ -165,8 +165,15 @@ func Name(name string) bool {
 	return strings.Trim(name, "abcdefghijklmnopqrstuvwxyz0123456789") == ""
 }
 
+// release is the address of a program's releases. A game's source is private, so its releases
+// are in a public repository of their own, named for its manual page (usrgames/.github#10); tty1's
+// own are in tty1's repository.
 func (c Client) release(name, rest string) string {
-	return strings.TrimSuffix(c.Releases, "/") + "/" + name + "/releases/" + rest
+	repo := name + ".6"
+	if name == "tty1" {
+		repo = name
+	}
+	return strings.TrimSuffix(c.Releases, "/") + "/" + repo + "/releases/" + rest
 }
 
 // Newest returns the manifest of a program's newest release and its signature, unchecked. It
